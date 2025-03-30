@@ -42,6 +42,7 @@ pipeline {
             steps {
                 script {
                     def public_ip = sh(script: "terraform output -raw public_ip", returnStdout: true).trim()
+                    echo "Public IP: ${public_ip}"
                     if (!public_ip || public_ip == "null") {
                         error "Failed to fetch public IP. Check Terraform output."
                     }
