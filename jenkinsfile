@@ -41,15 +41,14 @@ pipeline {
         stage('Fetch Public IP & Create Inventory') {
             steps {
                 script {
+                    sh 'terraform refresh'
                     def public_ip = sh(script: "terraform output -raw public_ip", returnStdout: true).trim()
                     echo "Public IP: ${public_ip}"
                     if (!public_ip || public_ip == "null") {
                         error "Failed to fetch public IP. Check Terraform output."
                     }
                     echo "Public IP: ${public_ip}"
-                    writeFile file: 'ansible/inventory', text: """[webserver]
-${public_ip} ansible_user=ubuntu
-"""
+                    writeFile file: 'ansible/inventory', text: "[webserver]\n${public_ip} ansible_user=ubuntu"
                 }
             }
         }
