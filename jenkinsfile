@@ -14,12 +14,12 @@ pipeline {
 
         stage('Setup AWS Credentials') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY', passwordVariable: 'AWS_SECRET_KEY')]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_CREDENTIALS']]) {
                     sh '''
                     mkdir -p ~/.aws
                     echo "[default]" > ~/.aws/credentials
-                    echo "aws_access_key_id = $AWS_ACCESS_KEY" >> ~/.aws/credentials
-                    echo "aws_secret_access_key = $AWS_SECRET_KEY" >> ~/.aws/credentials
+                    echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+                    echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
                     chmod 600 ~/.aws/credentials
                     '''
                 }
@@ -30,7 +30,7 @@ pipeline {
             steps {
                 dir('terraform') {
                     sh '''
-                    terraform destroy -auto-approve
+                    terraform destroy -auto-approve || true
                     terraform init
                     terraform apply -auto-approve
                     '''
@@ -45,7 +45,10 @@ pipeline {
                     if (!public_ip || public_ip == "null") {
                         error "Failed to fetch public IP. Check Terraform output."
                     }
-                    writeFile file: 'ansible/inventory', text: "[webserver]\n${public_ip} ansible_user=ubuntu"
+                    echo "Public IP: ${public_ip}"
+                    writeFile file: 'ansible/inventory', text: """[webserver]
+${public_ip} ansible_user=ubuntu
+"""
                 }
             }
         }
@@ -53,7 +56,7 @@ pipeline {
         stage('Run Ansible Playbook') {
             steps {
                 sh '''
-                ansible-playbook -i ansible/inventory ansible/playbook.yml
+                ansible-playbook -i ansible/inventory ansible/playbook.yml || exit 1
                 '''
             }
         }
